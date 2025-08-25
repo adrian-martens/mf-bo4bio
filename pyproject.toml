@@ -1,0 +1,26 @@
+[project]
+name = "mf-bo4bio"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "pre-commit>=4.3.0",
+    "ruff>=0.12.10",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+fix = true
+select = ["E", "F", "I"]  # Errors, Flake8, Imports
+ignore = []
+
