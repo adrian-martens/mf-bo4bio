@@ -1,0 +1,19 @@
+{
+    "clone distribution": "alpha",
+    "mbr_level": 7,
+    "n_iterations": 15,
+    "iterations": 15,
+    "best_values": [],
+    "best_points": [],
+    "batches": [],
+    "cumulative_cost_list": [
+        0
+    ],
+    "fidelities": [],
+    "clones": [],
+    "X_mean": 0,
+    "X_std": 1,
+    "y_mean": 0,
+    "y_std": 1,
+    "error": null
+}
