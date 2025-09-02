@@ -1,7 +1,7 @@
 [project]
 name = "mf-bo4bio"
 version = "0.1.0"
-description = "Add your description here"
+description = "Bioprocess Development Across Scales Using Multi-Fidelity Batch Bayesian Optimization"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []

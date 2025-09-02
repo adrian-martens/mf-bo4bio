@@ -13,3 +13,9 @@ __pycache__/
 
 # System specific files
 .DS_Store
+
+# Ruff stuff:
+.ruff_cache/
+
+# pyenv
+.python-version
