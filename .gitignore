@@ -10,3 +10,6 @@ wheels/
 .venv
 .venv/
 __pycache__/
+
+# System specific files
+.DS_Store
