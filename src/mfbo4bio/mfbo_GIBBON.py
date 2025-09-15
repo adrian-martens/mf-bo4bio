@@ -26,6 +26,20 @@ from mfbo4bio.utils import (
 
 
 class FixedFidelityCostModel(DeterministicModel):
+    """
+    Initializes a simple fixed fidelity cost model, which can be used for
+    multi-fidelity optimization. In botorch implementations this is a way
+    of making optimizations cost-aware.
+
+    Parameters
+    ----------
+    cost_map : dict[float, float]
+        A dictionary mapping each fidelity value to its corresponding cost.
+        For example, `{0.0: 2.0, 7.0: 10.0, 10.0: 200.0}`.
+    fidelity_dim : int, optional
+        The index of the fidelity dimension in the input tensor `X`.
+        It is assumed to be -2 by default.
+    """
 
     def __init__(
         self,
