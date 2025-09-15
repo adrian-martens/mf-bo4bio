@@ -433,12 +433,12 @@ def run(
         }
 
         os.makedirs(
-            f"./saved_runs/mbr_{int(mbr_level)}_{clone_distribution}/qLogEI",
+            f"../results/bo/{clone_distribution}/qLogEI",
             exist_ok=True,
         )
         # Save structured data as JSON
         with open(
-            f"./saved_runs/mbr_{int(mbr_level)}_{clone_distribution}/qLogEI/{output_name}.json",
+            f"../results/bo/{clone_distribution}/qLogEI/{output_name}.json",
             "w",
         ) as f:
             json.dump(bo_results, f, indent=4)

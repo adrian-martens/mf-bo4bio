@@ -477,12 +477,12 @@ def run(
         }
 
         os.makedirs(
-            f"./saved_runs/mbr_{int(mbr_level)}_{clone_distribution}/gibbon_icm",
+            f"../results/bo/{clone_distribution}/gibbon_icm",
             exist_ok=True,
         )
         # Save structured data as JSON
         with open(
-            f"./saved_runs/mbr_{int(mbr_level)}_{clone_distribution}/gibbon_icm/{output_name}.json",
+            f"../results/bo/{clone_distribution}/gibbon_icm_{output_name}.json",
             "w",
         ) as f:
             json.dump(bo_results, f, indent=4)

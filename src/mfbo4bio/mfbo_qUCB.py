@@ -429,7 +429,7 @@ def run(
         }
 
         os.makedirs(
-            f"./saved_runs/mbr_{int(mbr_level)}_{clone_distribution}/qUCB",
+            f"./results/bo/{clone_distribution}/qUCB",
             exist_ok=True,
         )
 
