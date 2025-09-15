@@ -45,8 +45,7 @@ def run_single_test_job(
         It executes a subprocess and prints a message if a file already exists.
     """
 
-    output_file = f"./saved_runs/mbr_{mbr_level}_{clone_distribution}/{test_type}/ \
-    {test_type}_{task_representation}_{date}_{seed+1}.json"
+    output_file = f"./results/bo/{clone_distribution}/{test_type}/{test_type}_{task_representation}_{date}_{seed+1}.json"
 
     if os.path.exists(output_file):
         print(f"Skipping existing run: {output_file}")
