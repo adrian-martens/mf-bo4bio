@@ -15,7 +15,7 @@ It is intended to help readers reproduce key results, explore the methodology, a
 
 The code is written in **Python 3.11** and includes:
 
-* Bioprocess Simulation Model
+* Bioprocess simulation model
 * Proposed BO workflow
 * Parallelized optimization test runs
 * Experimental results
