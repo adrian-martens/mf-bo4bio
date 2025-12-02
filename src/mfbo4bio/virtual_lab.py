@@ -186,7 +186,7 @@ class EXPERIMENT:
         if scale is None:
             scale = self.reactor
 
-        P, X_T, X_V, X_D, G, Q, L, A = np.clip(x, 1e-9, None)
+        P, X_T, X_V, X_D, G, Q, L, A = np.clip(x, 1e-6, None)
 
         if scale == "MTP":
             scale_factor = 5
