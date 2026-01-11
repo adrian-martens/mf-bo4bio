@@ -1,9 +1,9 @@
 import numpy as np
 import torch
 from botorch.optim import optimize_acqf
-from utils import sampling
 
 from mfbo4bio import conditions_data as data
+from mfbo4bio.utils import sampling
 
 dtype = torch.float64
 feeding_max = data.feeding_max
@@ -172,14 +172,16 @@ def custom_optimization(
 
                 acq_function.set_X_pending(X_pending)
                 acq_val_j = acq_function(X_j)
-                acq_value_list.append(max(0, acq_val_j.item()))
+                acq_value_list.append(acq_val_j)
 
-            total_acq = torch.tensor(sum(acq_value_list))
+            total_acq = torch.tensor(sum(acq_value_list), dtype=torch.float64)
+            acq_value_tensor = torch.tensor(acq_value_list, dtype=torch.float64)
 
             if best_acq_value is None or total_acq > best_acq_value:
                 best_acq_value = total_acq
+                best_acq_value_tensor = acq_value_tensor
                 best_candidates = candidate_i
 
             acq_function.set_X_pending(None)
 
-        return best_candidates, best_acq_value
+        return best_candidates, best_acq_value_tensor

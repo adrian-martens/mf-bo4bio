@@ -153,7 +153,7 @@ def run(
         # Train GP
         if task_representation == "HYBRID":
             model, likelihood = train_gp_model(
-                Xtrain, ytrain, model_type=task_representation, embed_dim=embed_dim
+                Xtrain, ytrain, model_type=task_representation
             )
         else:
             model, likelihood = train_gp_model(
@@ -301,7 +301,8 @@ def run(
                     destandardize_mixed_tensor(candidate_standardized, X_mean, X_std),
                 )
                 gibbon_values[i] = (
-                    (acq_value * correlations) / (batch_size[i] * cost_level[i])
+                    (torch.exp(acq_value) * correlations)
+                    / (batch_size[i] * cost_level[i])
                 ).sum()
                 batches_standardized[i] = candidate_standardized
 
