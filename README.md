@@ -70,7 +70,7 @@ The code is written in **Python 3.11** and includes:
 2. Create a virtual environment and install dependencies:
 
    ```bash
-   python -m venv mfbo4bio
+   python -m venv .venv
    source venv/bin/activate    # On Linux/Mac
    venv\Scripts\activate       # On Windows
    pip install -e .
