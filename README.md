@@ -64,7 +64,7 @@ The code is written in **Python 3.11** and includes:
 
    ```bash
    git clone https://github.com/adrian-martens/mf-bo4bio.git
-   cd your-repo
+   cd mf-bo4vio
    ```
 
 2. Create a virtual environment and install dependencies:
