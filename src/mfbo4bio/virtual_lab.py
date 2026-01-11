@@ -78,8 +78,8 @@ class EXPERIMENT:
         mu = self.E_a
         A = 1.2
 
-        left_part = np.exp(-2 * ((x - mu) / 3) ** 2)
-        right_part = np.exp(-2 * ((x - mu) / 2) ** 2)
+        left_part = np.exp(-1 * ((x - mu) / 5) ** 2)
+        right_part = np.exp(-1 * ((x - mu) / 5) ** 2)
 
         factor = A * np.where(x < mu, left_part, right_part)
         factor = np.clip(factor, 0.2, None)
