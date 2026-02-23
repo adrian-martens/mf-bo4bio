@@ -36,10 +36,9 @@ class EntityEmbeddingKernel(Kernel):
 
     has_lengthscale = False
 
-    def __init__(self, num_categories: int, embed_dim: int, **kwargs):
+    def __init__(self, num_categories: int, embed_dim: int = 3, **kwargs):
         super().__init__(**kwargs)
-
-        self.embedding = torch.nn.Parameter(torch.randn(num_categories, embed_dim))
+        self.embedding = torch.nn.Parameter(torch.randn((num_categories, embed_dim)))
         self.num_categories = num_categories
 
     def forward(self, x1, x2, diag=False, **params):
@@ -74,7 +73,7 @@ class CustomMultiTaskGP(SingleTaskGP):
         The training output tensor.
     """
 
-    def __init__(self, train_X, train_Y):
+    def __init__(self, train_X, train_Y, embed_dim=3):
 
         super().__init__(
             train_X,
@@ -87,10 +86,11 @@ class CustomMultiTaskGP(SingleTaskGP):
         self.covar_module = ScaleKernel(
             RBFKernel(ard_num_dims=dims - 1, lengthscale_constraint=Interval(0.01, 5.0))
         )
-
         self.task_module = EntityEmbeddingKernel(
-            num_categories=len(data.process_parameters_beta.keys()), embed_dim=4
+            num_categories=len(data.process_parameters_beta.keys()), embed_dim=embed_dim
         )
+
+        self.task_module.embedding
         self.add_module("task_module", self.task_module)
 
     def forward(self, x):
@@ -178,15 +178,53 @@ def standardize_data(X, y=None):
         - X_mean : The mean of the original input data.
         - X_std : The standard deviation of the original input data.
     """
+    eps = 1e-12
     X_mean, X_std = X.mean(axis=0), X.std(axis=0)
-    X_standardized = (X - X_mean) / X_std
+    X_std_safe = np.where(np.abs(X_std) < eps, 1.0, X_std)
+    X_standardized = (X - X_mean) / X_std_safe
 
     if y is not None:
         y = np.array(y)
         y_mean, y_std = y.mean(), y.std()
-        y_standardized = (y - y_mean) / y_std
-        return X_standardized, y_standardized, X_mean, X_std, y_mean, y_std
-    return X_standardized, X_mean, X_std
+        y_std_safe = 1.0 if abs(y_std) < eps else y_std
+        y_standardized = (y - y_mean) / y_std_safe
+        return X_standardized, y_standardized, X_mean, X_std_safe, y_mean, y_std_safe
+    return X_standardized, X_mean, X_std_safe
+
+
+def minmax_scale_data(X, X_lower=None, X_upper=None):
+    """
+    Min-max scales X into [0, 1] range using provided bounds or data bounds.
+    Returns scaled data, lower bounds, and ranges.
+    """
+    eps = 1e-12
+    X = np.asarray(X, dtype=float)
+    if X_lower is None:
+        X_lower = X.min(axis=0)
+    else:
+        X_lower = np.asarray(X_lower, dtype=float)
+    if X_upper is None:
+        X_upper = X.max(axis=0)
+    else:
+        X_upper = np.asarray(X_upper, dtype=float)
+
+    X_range = X_upper - X_lower
+    X_range_safe = np.where(np.abs(X_range) < eps, 1.0, X_range)
+    X_scaled = (X - X_lower) / X_range_safe
+    return X_scaled, X_lower, X_range_safe
+
+
+def standardize_target(y):
+    """
+    Standardize target with numerical guard for near-constant data.
+    """
+    eps = 1e-12
+    y = np.asarray(y, dtype=float)
+    y_mean = float(y.mean())
+    y_std = float(y.std())
+    y_std_safe = 1.0 if abs(y_std) < eps else y_std
+    y_standardized = (y - y_mean) / y_std_safe
+    return y_standardized, y_mean, y_std_safe
 
 
 def unstandardize_y(y_standardized, y_mean, y_std):
@@ -218,6 +256,7 @@ def train_gp_model(
     training_iter=5000,
     dims=2,
     model_type="HYBRID",
+    embed_dim=3,
 ):
     """
     Trains a GP model using standardized data.
@@ -255,7 +294,7 @@ def train_gp_model(
     if model_type == "HYBRID":
         from botorch.fit import fit_gpytorch_mll
 
-        model = CustomMultiTaskGP(train_x, train_y)
+        model = CustomMultiTaskGP(train_x, train_y, embed_dim)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(model.likelihood, model)
         fit_gpytorch_mll(mll, options={"maxiter": 800})
         return mll.model, mll.likelihood
@@ -302,13 +341,14 @@ def sampling(
     """
     Generate samples using a specified sampling method in a mixed-dimensional space.
 
-    This function supports "latin_hypercube" sampling and can apply constraints
+    This function supports "latin_hypercube", "sobol", and "factorial" sampling
+    and can apply constraints
     and control the distribution of fidelity levels in the generated samples.
 
     Parameters
     ----------
     method : str, optional
-        Sampling method. Currently supports "latin_hypercube".
+        Sampling method. Supports "latin_hypercube", "sobol", or "factorial".
         Defaults to "latin_hypercube".
     dimensions_dict : dict
         A dictionary where keys are dimension names and values are tuples
@@ -340,7 +380,8 @@ def sampling(
         or if `fidelity_distribution` is not provided.
     """
 
-    if method != "latin_hypercube":
+    supported_methods = {"latin_hypercube", "sobol", "factorial"}
+    if method not in supported_methods:
         raise ValueError(f"Unsupported sampling method: {method}")
 
     if (
@@ -376,8 +417,9 @@ def sampling(
         if count == 0:
             continue
 
-        sampler = qmc.LatinHypercube(d=len(other_dims), seed=seed)
-        samples = sampler.random(n=count)
+        samples = _generate_base_samples(
+            method=method, n=count, d=len(other_dims), seed=seed
+        )
 
         scaled_samples = np.zeros((count, len(dimension_names)))
 
@@ -387,9 +429,12 @@ def sampling(
 
             if dim_type == "continuous":
                 low, high = dim_values
-                scaled_samples[:, dim_idx] = qmc.scale(
-                    samples[:, [i]], low, high
-                ).flatten()
+                if high <= low:
+                    scaled_samples[:, dim_idx] = float(low)
+                else:
+                    scaled_samples[:, dim_idx] = qmc.scale(
+                        samples[:, [i]], low, high
+                    ).flatten()
             elif dim_type == "discrete":
                 allowed_values = np.array(dim_values)
                 indices = (
@@ -436,6 +481,23 @@ def sampling(
     return final_samples[:num_samples]
 
 
+def _generate_base_samples(method, n, d, seed):
+    if method == "latin_hypercube":
+        return qmc.LatinHypercube(d=d, seed=seed).random(n=n)
+    if method == "sobol":
+        return qmc.Sobol(d=d, scramble=True, seed=seed).random(n=n)
+    if method == "factorial":
+        levels = np.array([0.0, 1.0], dtype=float)
+        mesh = np.array(np.meshgrid(*([levels] * d))).T.reshape(-1, d)
+        if hasattr(seed, "shuffle"):
+            seed.shuffle(mesh)
+        elif seed is not None:
+            np.random.default_rng(seed).shuffle(mesh)
+        reps = int(np.ceil(n / len(mesh)))
+        return np.tile(mesh, (reps, 1))[:n]
+    raise ValueError(f"Unsupported sampling method: {method}")
+
+
 def standardize_mixed_tensor(X, X_mean, X_std, catergorical_dim=-1):
     """
     Standardizes a mixed-type tensor containing both
@@ -460,7 +522,12 @@ def standardize_mixed_tensor(X, X_mean, X_std, catergorical_dim=-1):
     """
     X_categorical = X[:, catergorical_dim].unsqueeze(-1)
     X_continuous = X[:, :catergorical_dim]
-    X_standardized = (X_continuous - X_mean) / X_std
+    X_std_safe = torch.where(
+        torch.abs(torch.as_tensor(X_std, dtype=X_continuous.dtype)) < 1e-12,
+        torch.ones_like(torch.as_tensor(X_std, dtype=X_continuous.dtype)),
+        torch.as_tensor(X_std, dtype=X_continuous.dtype),
+    )
+    X_standardized = (X_continuous - X_mean) / X_std_safe
     return torch.hstack((X_standardized, X_categorical))
 
 
