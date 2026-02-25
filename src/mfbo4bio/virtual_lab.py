@@ -3,6 +3,9 @@ from scipy.integrate import solve_ivp
 
 import mfbo4bio.conditions_data as data
 
+REACTOR_NAME_BY_FIDELITY = {0: "MTP", 10: "PILOT"}
+STATE_INDEX = {"P": 0, "X_T": 1, "X_V": 2, "X_D": 3, "G": 4, "Q": 5, "L": 6, "A": 7}
+
 
 class EXPERIMENT:
     def __init__(
@@ -34,7 +37,6 @@ class EXPERIMENT:
         params = df[df["cell_type"] == cell_type]
 
         self.reactor = reactor
-        self.volume = 3  # L
         self.cell_type = cell_type
         self.time = time  # experiment time
         self.mu_max = params["mu_max"].iloc[0]
@@ -189,16 +191,16 @@ class EXPERIMENT:
         P, X_T, X_V, X_D, G, Q, L, A = np.clip(x, 1e-6, None)
 
         if scale == "MTP":
-            scale_factor = 5
-            growth_inhibition = 0.95
+            scale_factor = 0.8
+            growth_inhibition = 0.7
 
         elif scale == "MBR":
-            scale_factor = 4
-            growth_inhibition = 0.99
+            scale_factor = 1
+            growth_inhibition = 1
 
         elif scale == "PILOT":
-            scale_factor = 8
-            growth_inhibition = 1.1
+            scale_factor = 1.4
+            growth_inhibition = 0.6
 
         mu = self.mu(G, Q, L, A, growth_inhibition)
 
@@ -208,10 +210,12 @@ class EXPERIMENT:
         m_G, m_Q = self.m
 
         dX_T_dt = mu * X_V - self.K_lysis * X_D
-        dX_V_dt = (mu - k_d) * max(X_V, 1e-6) ** growth_inhibition
+        dX_V_dt = (mu - k_d) * X_V  # ** growth_inhibition
         dX_D_dt = k_d * X_V - self.K_lysis * X_D
 
-        dP_dt = Y_P_X * X_T + Y_dot_P_X * (mu * G / (self.K_G + G)) * X_V
+        # print(f"{P} BALANCE: {dX_D_dt+dX_V_dt} = {dX_T_dt} | X_D {X_D} | X_V {X_V}")
+
+        dP_dt = Y_P_X * X_T + Y_dot_P_X * X_V
 
         dG_dt = X_V * (-mu / Y_X_G - m_G)
         dQ_dt = X_V * (-mu / Y_X_Q - m_Q) - self.k_d_Q * Q
@@ -294,7 +298,7 @@ class EXPERIMENT:
         y_total = np.hstack(y_total)
 
         self.solution = y_total
-        self.solution[0] = self.solution[0] / (self.volume * 1e3)
+        self.solution[0] = self.solution[0] / 1e3
         self.t = t_eval_total
         return y_total
 
@@ -330,9 +334,7 @@ class EXPERIMENT:
 
         self.ODE_solver()
 
-        index = {"P": 0, "X_T": 1, "X_V": 2, "X_D": 3, "G": 4, "Q": 5, "L": 6, "A": 7}
-
-        true_value = self.solution[index[quantity]][-1]
+        true_value = self.solution[STATE_INDEX[quantity]][-1]
 
         if rng is None:
             rng = np.random.default_rng()
@@ -391,7 +393,8 @@ def conduct_experiment(
         If an invalid `clone_distribution` is specified.
     """
 
-    reactor_list = {0: "MTP", mbr_level: "MBR", 10: "PILOT"}
+    reactor_list = dict(REACTOR_NAME_BY_FIDELITY)
+    reactor_list[mbr_level] = "MBR"
 
     if clone_distribution == "alpha":
         process_parameters = data.process_parameters_alpha
