@@ -7,7 +7,7 @@ def main() -> None:
     for i in range(preset.repeats):
         industrial_methods.run(
             output_name=f"factorial_{preset.date}_{i+1}",
-            n_iterations=15,
+            n_iterations=25,
             sampling_method="factorial",
             seed=i,
             clone_distribution=preset.clone_dist,
@@ -15,7 +15,7 @@ def main() -> None:
         )
         industrial_methods.run(
             output_name=f"lhs_{preset.date}_{i+1}",
-            n_iterations=15,
+            n_iterations=25,
             sampling_method="latin_hypercube",
             seed=i,
             clone_distribution=preset.clone_dist,
@@ -23,7 +23,7 @@ def main() -> None:
         )
         industrial_methods.run(
             output_name=f"sobol_{preset.date}_{i+1}",
-            n_iterations=15,
+            n_iterations=25,
             sampling_method="sobol",
             seed=i,
             clone_distribution=preset.clone_dist,
