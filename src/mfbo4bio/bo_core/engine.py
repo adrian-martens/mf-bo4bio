@@ -219,6 +219,7 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
                 cand_std, acq_value = propose_batch_for_fidelity(
                     fidelity=fidelity,
                     mbr_level=exp_cfg.mbr_level,
+                    method=method,
                     batch_size=batch_size,
                     acq_fn=acq_fn,
                     bounds=bounds,

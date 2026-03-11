@@ -28,7 +28,7 @@ class ExperimentConfig:
 @dataclass(slots=True)
 class BOConfig:
     n_iterations: int = 10
-    task_representation: Literal["HYBRID", "ICM_WRAPPED"] = "ICM_WRAPPED"
+    task_representation: Literal["HYBRID", "ICM_WRAPPED"] = "HYBRID"
     embed_dim: int = 3
     beta: float = 1.0
     batch_size_by_fidelity: Dict[int, int] = field(default_factory=dict)

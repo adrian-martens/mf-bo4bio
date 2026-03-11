@@ -15,6 +15,7 @@ def custom_optimization(
     bounds,
     q=12,
     resolution=3,
+    mode="sampling",
     seed=42,
     process_parameters=data.process_parameters_alpha,
 ):
@@ -46,6 +47,9 @@ def custom_optimization(
     process_parameters : dict, optional
         A dictionary containing process parameters for different cell types.
         Defaults to `data.process_parameters_alpha`.
+    mode : str, optional
+        Included for API compatibility with BO core calls. Currently only
+        "sampling" behavior is implemented.
 
     Returns
     -------

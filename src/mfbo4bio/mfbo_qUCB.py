@@ -10,7 +10,7 @@ def run(
     seed=None,
     clone_distribution="alpha",
     mbr_level=7,
-    task_representation="ICM_WRAPPED",
+    task_representation="HYBRID",
     embed_dim=3,
     beta=1,
 ):
