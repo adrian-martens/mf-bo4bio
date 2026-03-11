@@ -33,11 +33,12 @@ def bo_output_paths(config: RunConfig) -> list[Path]:
     clone = config.experiment.clone_distribution
     method = config.method
     if method == "GIBBON":
-        # keep legacy and CLI-compatible locations
-        return [
-            root / "bo" / clone / "gibbon_icm" / f"{config.output_name}.json",
-            root / "bo" / clone / "GIBBON" / f"{config.output_name}.json",
-        ]
+        # Keep output directory aligned with chosen task representation.
+        # HYBRID runs are stored under "GIBBON", while legacy ICM runs are
+        # stored under "gibbon_icm" for backward compatibility.
+        if config.bo.task_representation == "ICM_WRAPPED":
+            return [root / "bo" / clone / "gibbon_icm" / f"{config.output_name}.json"]
+        return [root / "bo" / clone / "GIBBON" / f"{config.output_name}.json"]
     return [root / "bo" / clone / method / f"{config.output_name}.json"]
 
 
