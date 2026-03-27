@@ -219,3 +219,16 @@ Batch runner that reads `DEFAULT_BO_PRESET`, enumerates all combinations of (met
 ### `run_industrial_scenarios.py`
 
 Runs industrial baselines (factorial, Latin hypercube, Sobol) across multiple seeds using `DEFAULT_INDUSTRIAL_PRESET`.
+
+---
+
+## Notebooks (`notebooks/`)
+
+### `clone_distribution_plot.ipynb`
+
+Crafts and visualizes the two clone distributions used throughout the experiments:
+
+- **Alpha (diverse)** -- a stepped `mu_max` scaling profile where the top 30% of clones receive substantially higher growth-rate multipliers (1.25--1.55) than the remaining 70% (0.70--1.05). This creates a distribution with clearly differentiated top performers, making clone selection a significant factor in optimization.
+- **Beta (plateau)** -- a smooth, concave power-curve scaling profile that rises steeply from the weakest clones and flattens into a plateau near the top. The best-performing clones are nearly indistinguishable at pilot scale, making it harder for the optimizer to identify the single best clone.
+
+Both distributions are generated from random base parameters via `clone_creator.generate_process_parameters`, then shaped by applying the respective `mu_max` scaling profiles. The notebook also simulates all clones across all fidelity levels (MTP, MBR, PILOT) and produces a stacked bar chart comparing the maximum product titers per clone and fidelity for each distribution.
