@@ -102,12 +102,12 @@ def custom_optimization(
             dtype=torch.float64,
         )
 
-        candidate_i = row.repeat(12, 1)
+        candidate_i = row.repeat(q, 1)
 
         candidate_clones = torch.tensor(
             sampling(
                 dimensions_dict=dimensions_dict,
-                num_samples=12,
+                num_samples=q,
                 seed=seed,
                 fidelity_distribution=fidelity_distribution,
             ),
