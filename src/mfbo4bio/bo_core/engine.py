@@ -137,7 +137,7 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
             x_std=x_std,
             y_mean=float(y_mean),
             y_std=float(y_std),
-            best_values=[float(ytrain.max().item())],
+            best_values=[float(np.max(y_initial))],
             best_points=[best_initial],
             batches=[x_initial],
             fidelities=[0],
@@ -191,12 +191,6 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
                     x[..., -2] = (10 - x_mean[-1]) / x_std[-1]
                     return x
 
-            fidelity_std = float(x_std[5]) if abs(float(x_std[5])) > 1e-12 else 1.0
-            standardized_cost_map = {
-                float((fid - x_mean[5]) / fidelity_std): cost
-                for fid, cost in cost_level.items()
-            }
-
             acq_fn = build_acquisition(
                 method=method,
                 model=model,
@@ -205,7 +199,6 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
                 beta=bo_cfg.beta,
                 candidate_set=candidate_set_standardized,
                 project_fn=project_to_fidelity,
-                cost_map=standardized_cost_map,
             )
 
             scored_candidates: dict[int, torch.Tensor] = {}

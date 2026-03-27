@@ -36,4 +36,4 @@ def correlation_weighted_score(
 
 
 def gibbon_score(*, acq_value, cost: int, batch_size: int) -> torch.Tensor:
-    return (acq_value).sum()  # (acq_value / (batch_size * cost)).sum()
+    return (acq_value / (batch_size * cost)).sum()

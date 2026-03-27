@@ -25,23 +25,18 @@ def build_inequality_constraints(
     x_mean: np.ndarray,
     x_std: np.ndarray,
     feeding_max: float,
-    tol: float = 0.4,
     dtype=torch.float64,
 ):
-    mean_sum = x_mean[2:5].sum()
-    std_sum = np.sqrt(x_std[2] ** 2 + x_std[3] ** 2 + x_std[4] ** 2)
-    standardized_feeding_max = (feeding_max - mean_sum) / std_sum
+    # Min-max scaling: raw[i] = scaled[i] * x_std[i] + x_mean[i].
+    # Constraint: raw[2] + raw[3] + raw[4] <= feeding_max
+    # In scaled space: sum(scaled[i] * x_std[i]) <= feeding_max - sum(x_mean[2:5])
+    # BoTorch format: coefficients @ X[indices] >= rhs  (>= convention)
+    coeffs = torch.tensor(
+        [-float(x_std[2]), -float(x_std[3]), -float(x_std[4])], dtype=dtype
+    )
+    rhs = -(feeding_max - float(x_mean[2:5].sum()))
     return [
-        (
-            torch.tensor([2, 3, 4], dtype=torch.long),
-            torch.tensor([1.0, 1.0, 1.0], dtype=dtype),
-            standardized_feeding_max - tol,
-        ),
-        (
-            torch.tensor([2, 3, 4], dtype=torch.long),
-            torch.tensor([-1.0, -1.0, -1.0], dtype=dtype),
-            -standardized_feeding_max,
-        ),
+        (torch.tensor([2, 3, 4], dtype=torch.long), coeffs, rhs),
     ]
 
 
@@ -49,6 +44,7 @@ def propose_batch_for_fidelity(
     *,
     fidelity: int,
     mbr_level: int,
+    method: str = "qUCB",
     batch_size: dict[int, int],
     acq_fn,
     bounds,
@@ -58,7 +54,8 @@ def propose_batch_for_fidelity(
     process_parameters,
 ):
     dtype = torch.float64
-    fixed_features = {5: torch.tensor((fidelity - x_mean[5]) / x_std[5], dtype=dtype)}
+    fidelity_fixed = torch.tensor((fidelity - x_mean[5]) / x_std[5], dtype=dtype)
+    fixed_features = {5: fidelity_fixed}
 
     if fidelity == 0:
         candidate, acq_value = custom_optimization(
@@ -75,18 +72,40 @@ def propose_batch_for_fidelity(
         return candidate, acq_value
 
     try:
+        num_restarts = 10 if method == "GIBBON" else 5
+        raw_samples = 1024 if method == "GIBBON" else 512
         candidate, acq_value = optimize_acqf(
             acq_function=acq_fn,
             bounds=bounds,
             q=batch_size[fidelity],
-            num_restarts=5,
-            raw_samples=512,
+            num_restarts=num_restarts,
+            raw_samples=raw_samples,
             sequential=True,
             fixed_features=fixed_features,
             inequality_constraints=build_inequality_constraints(
                 x_mean, x_std, feeding_max=50.0
             ),
+            options={"maxiter": 300, "batch_limit": 5},
+            retry_on_optimization_warning=True,
         )
+        if method == "GIBBON":
+            # Keep clone/task ids valid integers after continuous optimization.
+            max_clone = len(process_parameters.keys()) - 1
+            candidate[:, -1] = torch.clamp(torch.round(candidate[:, -1]), 0, max_clone)
+            acq_value = _evaluate_batch_acq(acq_fn=acq_fn, batch=candidate)
+        acq_sum = (
+            float(acq_value.sum().item())
+            if torch.is_tensor(acq_value)
+            else float(acq_value)
+        )
+        if not np.isfinite(acq_sum) or abs(acq_sum) < 1e-12:
+            return _sampling_fallback_candidates(
+                acq_fn=acq_fn,
+                bounds=bounds,
+                q=batch_size[fidelity],
+                fixed_features=fixed_features,
+                rng=rng,
+            )
         return candidate, acq_value
     except RuntimeError as err:
         message = str(err)
@@ -101,6 +120,25 @@ def propose_batch_for_fidelity(
         )
 
 
+def _evaluate_batch_acq(acq_fn, batch):
+    values = []
+    with torch.no_grad():
+        for j in range(batch.shape[0]):
+            x_j = batch[j].unsqueeze(0)
+            x_pending = batch[:j] if j > 0 else None
+            if hasattr(acq_fn, "set_X_pending"):
+                acq_fn.set_X_pending(x_pending)
+            value_j = acq_fn(x_j)
+            values.append(
+                float(value_j.sum().item())
+                if torch.is_tensor(value_j)
+                else float(value_j)
+            )
+        if hasattr(acq_fn, "set_X_pending"):
+            acq_fn.set_X_pending(None)
+    return torch.tensor(values, dtype=batch.dtype)
+
+
 def _sampling_fallback_candidates(acq_fn, bounds, q, fixed_features, rng):
     dtype = torch.float64
     lower = bounds[0]
@@ -109,7 +147,7 @@ def _sampling_fallback_candidates(acq_fn, bounds, q, fixed_features, rng):
     best_batch = None
     best_value = None
 
-    for _ in range(64):
+    for _ in range(256):
         u = torch.tensor(
             rng.random((q, n_features)),
             dtype=dtype,
