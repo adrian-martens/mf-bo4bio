@@ -12,16 +12,18 @@ class BOScenarioPreset:
     seeds: list[int]
     dates: list[str]
     task_representations: list[str]
+    # embed_dims: list[int]
 
 
 DEFAULT_BO_PRESET = BOScenarioPreset(
-    iterations=25,
+    iterations=50,
     mbr_levels=[7],
     clone_distributions=["alpha", "beta"],
-    test_types=["GIBBON"],
+    test_types=["GIBBON", "qLogEI", "qUCB"],
     seeds=list(range(10)),
-    dates=["TEST1"],
-    task_representations=["HYBRID"],
+    dates=["DIM_TEST"],
+    task_representations=["HYBRID", "ICM_WRAPPED"],
+    # embed_dims=[2, 3, 5, 6, 10],
 )
 
 

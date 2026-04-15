@@ -44,6 +44,7 @@ def main():
     parser.add_argument("--clone_distribution", type=str, required=True)
     parser.add_argument("--date", type=str, required=True)
     parser.add_argument("--task_representation", type=str, required=True)
+    parser.add_argument("--embed_dim", type=int, default=3)
 
     args = parser.parse_args()
 
@@ -59,6 +60,7 @@ def main():
             clone_distribution=args.clone_distribution,
             mbr_level=args.mbr_level,
             task_representation=args.task_representation,
+            embed_dim=args.embed_dim,
         )
     elif args.test_type == "qUCB":
         qUCB.run(
@@ -68,6 +70,7 @@ def main():
             clone_distribution=args.clone_distribution,
             mbr_level=args.mbr_level,
             task_representation=args.task_representation,
+            embed_dim=args.embed_dim,
         )
     elif args.test_type == "qLogEI":
         qLogEI.run(
@@ -77,6 +80,7 @@ def main():
             clone_distribution=args.clone_distribution,
             mbr_level=args.mbr_level,
             task_representation=args.task_representation,
+            embed_dim=args.embed_dim,
         )
 
 
