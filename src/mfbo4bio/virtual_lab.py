@@ -191,7 +191,7 @@ class EXPERIMENT:
         P, X_T, X_V, X_D, G, Q, L, A = np.clip(x, 1e-6, None)
 
         if scale == "MTP":
-            scale_factor = 0.8
+            scale_factor = 1.1
             growth_inhibition = 0.7
 
         elif scale == "MBR":
@@ -200,7 +200,7 @@ class EXPERIMENT:
 
         elif scale == "PILOT":
             scale_factor = 1.4
-            growth_inhibition = 0.6
+            growth_inhibition = 0.9
 
         mu = self.mu(G, Q, L, A, growth_inhibition)
 
@@ -210,10 +210,8 @@ class EXPERIMENT:
         m_G, m_Q = self.m
 
         dX_T_dt = mu * X_V - self.K_lysis * X_D
-        dX_V_dt = (mu - k_d) * X_V  # ** growth_inhibition
+        dX_V_dt = (mu - k_d) * X_V
         dX_D_dt = k_d * X_V - self.K_lysis * X_D
-
-        # print(f"{P} BALANCE: {dX_D_dt+dX_V_dt} = {dX_T_dt} | X_D {X_D} | X_V {X_V}")
 
         dP_dt = Y_P_X * X_T + Y_dot_P_X * X_V
 
