@@ -67,19 +67,24 @@ def factorial(
     dimension_names = list(dimensions_dict.keys())
     other_dims = [d for d in dimension_names if d != "fidelity"]
 
-    # Full factorial: Only works for discrete or binarized continuous dimensions
-    levels = []
+    # Clone is excluded from the Cartesian product and assigned separately
+    # so every clone value appears at least once.
+    clone_values = None
+    factorial_dims = []
     for dim in other_dims:
         dtype, values = dimensions_dict[dim]
-        if dtype == "continuous":
-            levels.append(
-                [values[0], (values[0] + values[1]) / 2, values[1]]
-            )  # 2-level version
+        if dim == "clone":
+            clone_values = list(values)
+        elif dtype == "continuous":
+            factorial_dims.append(
+                (dim, [values[0], (values[0] + values[1]) / 2, values[1]])
+            )
         elif dtype == "discrete":
-            levels.append(values)
+            factorial_dims.append((dim, list(values)))
         else:
             raise ValueError(f"Unsupported type in factorial: {dtype}")
 
+    levels = [vals for _, vals in factorial_dims]
     factorial_samples = np.array(list(product(*levels)))
     rng.shuffle(factorial_samples)
 
@@ -104,10 +109,28 @@ def factorial(
     for fidelity, count in counts.items():
         if count == 0:
             continue
-        selected = factorial_samples[:count]
+
+        # Tile factorial rows to fill `count` (handles count > len(factorial_samples))
+        repeats = count // len(factorial_samples) + 1
+        tiled = np.tile(factorial_samples, (repeats, 1))
+        rng.shuffle(tiled)
+        selected = tiled[:count]
+
         full = np.zeros((count, len(dimension_names)))
-        for i, d in enumerate(other_dims):
-            full[:, dimension_names.index(d)] = selected[:, i]
+        for col_idx, (dim, _) in enumerate(factorial_dims):
+            full[:, dimension_names.index(dim)] = selected[:, col_idx]
+
+        # Clone assignment: same LHS-style discrete sampling used in quasi_mc_methods.
+        # LatinHypercube over [0, n_clones] stratifies so each clone value appears
+        # floor(count/n_clones) or ceil(count/n_clones) times.
+        if clone_values is not None:
+            clone_lhs = qmc.LatinHypercube(d=1, seed=rng).random(n=count)
+            clone_idx = np.floor(
+                qmc.scale(clone_lhs, 0, len(clone_values))
+            ).astype(int).flatten()
+            clone_idx = np.clip(clone_idx, 0, len(clone_values) - 1)
+            full[:, dimension_names.index("clone")] = np.array(clone_values)[clone_idx]
+
         full[:, dimension_names.index("fidelity")] = fidelity
 
         if constraints:
