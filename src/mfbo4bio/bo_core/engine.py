@@ -159,8 +159,7 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
         fidelity_levels = [0, exp_cfg.mbr_level, 10]
 
         for iteration in range(bo_cfg.n_iterations):
-            if state.cumulative_cost_list[-1] >= 40000:
-                break
+            cost_exceeded = state.cumulative_cost_list[-1] >= 40000
 
             bounds = build_bounds(
                 x_mean, x_std, len(process_parameters.keys()), dtype=dtype
@@ -242,7 +241,7 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
                     )
 
             selected_fidelity = max(scores, key=lambda fid: float(scores[fid].item()))
-            if iteration == bo_cfg.n_iterations - 1:
+            if iteration == bo_cfg.n_iterations - 1 or cost_exceeded:
                 selected_fidelity = 10
 
             batch = (
@@ -295,6 +294,9 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
                 model, _ = train_gp_model(
                     xtrain, ytrain, model_type=bo_cfg.task_representation
                 )
+
+            if cost_exceeded:
+                break
 
         best_values = state.best_values
         best_from_batch = state.best_points
