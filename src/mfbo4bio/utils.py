@@ -437,11 +437,27 @@ def sampling(
                     ).flatten()
             elif dim_type == "discrete":
                 allowed_values = np.array(dim_values)
-                indices = (
-                    np.floor(qmc.scale(samples[:, [i]], 0, len(allowed_values)))
-                    .astype(int)
-                    .flatten()
-                )
+                if method == "factorial":
+                    # Factorial generates only {0, 1}, which maps to the first and
+                    # last discrete value only. Use LHS stratification instead to
+                    # ensure all discrete values appear.
+                    lhs_seed = (
+                        seed
+                        if not hasattr(seed, "integers")
+                        else int(seed.integers(2**31))
+                    )
+                    lhs_col = qmc.LatinHypercube(d=1, seed=lhs_seed).random(n=count)
+                    indices = (
+                        np.floor(qmc.scale(lhs_col, 0, len(allowed_values)))
+                        .astype(int)
+                        .flatten()
+                    )
+                else:
+                    indices = (
+                        np.floor(qmc.scale(samples[:, [i]], 0, len(allowed_values)))
+                        .astype(int)
+                        .flatten()
+                    )
                 indices = np.clip(indices, 0, len(allowed_values) - 1)
                 scaled_samples[:, dim_idx] = allowed_values[indices]
             else:
