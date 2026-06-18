@@ -12,7 +12,7 @@ class BOScenarioPreset:
     seeds: list[int]
     dates: list[str]
     task_representations: list[str]
-    # embed_dims: list[int]
+    embed_dims: list[int]
 
 
 DEFAULT_BO_PRESET = BOScenarioPreset(
@@ -23,7 +23,7 @@ DEFAULT_BO_PRESET = BOScenarioPreset(
     seeds=list(range(10)),
     dates=["DIM_TEST"],
     task_representations=["HYBRID", "ICM_WRAPPED"],
-    # embed_dims=[2, 3, 5, 6, 10],
+    embed_dims=[2, 3, 5, 6, 10],
 )
 
 

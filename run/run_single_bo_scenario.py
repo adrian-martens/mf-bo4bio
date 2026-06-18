@@ -48,8 +48,11 @@ def main():
 
     args = parser.parse_args()
 
+    embed_suffix = (
+        f"_embed{args.embed_dim}" if args.task_representation == "HYBRID" else ""
+    )
     output_name = (
-        f"{args.test_type}_{args.task_representation}_{args.date}_{args.seed + 1}"
+        f"{args.test_type}_{args.task_representation}{embed_suffix}_{args.date}_{args.seed + 1}"
     )
 
     if args.test_type == "GIBBON":

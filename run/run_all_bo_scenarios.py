@@ -14,23 +14,16 @@ def run_single_test_job(
     seed,
     date,
     task_representation,
-    # embed_dim,
+    embed_dim,
 
 ):
-    # embed_suffix = f"_embed{embed_dim}" if task_representation == "HYBRID" else ""
-    # output_file = os.path.join(
-    #     "results",
-    #     "bo",
-    #     clone_distribution,
-    #     test_type,
-    #     f"{test_type}_{task_representation}{embed_suffix}_{date}_{seed+1}.json",
-    # )
+    embed_suffix = f"_embed{embed_dim}" if task_representation == "HYBRID" else ""
     output_file = os.path.join(
         "results",
         "bo",
         clone_distribution,
         test_type,
-        f"{test_type}_{task_representation}_{date}_{seed+1}.json",
+        f"{test_type}_{task_representation}{embed_suffix}_{date}_{seed+1}.json",
     )
 
     if os.path.exists(output_file):
@@ -55,8 +48,8 @@ def run_single_test_job(
             date,
             "--task_representation",
             task_representation,
-            # "--embed_dim",
-            # str(embed_dim),
+            "--embed_dim",
+            str(embed_dim),
         ],
         check=True,
     )
@@ -64,34 +57,23 @@ def run_single_test_job(
 
 def main():
     preset = DEFAULT_BO_PRESET
-    jobs = list(
-        product(
-            preset.test_types,
-            preset.mbr_levels,
-            preset.clone_distributions,
-            [preset.iterations],
-            preset.seeds,
-            preset.dates,
-            preset.task_representations,
+    jobs = []
+    for task_representation in preset.task_representations:
+        embed_dims = (
+            preset.embed_dims if task_representation == "HYBRID" else [preset.embed_dims[0]]
         )
-    )
-    # jobs = []
-    # for task_representation in preset.task_representations:
-    #     embed_dims = (
-    #         preset.embed_dims if task_representation == "HYBRID" else [preset.embed_dims[0]]
-    #     )
-    #     jobs.extend(
-    #         product(
-    #             preset.test_types,
-    #             preset.mbr_levels,
-    #             preset.clone_distributions,
-    #             [preset.iterations],
-    #             preset.seeds,
-    #             preset.dates,
-    #             [task_representation],
-    #             embed_dims,
-    #         )
-    #     )
+        jobs.extend(
+            product(
+                preset.test_types,
+                preset.mbr_levels,
+                preset.clone_distributions,
+                [preset.iterations],
+                preset.seeds,
+                preset.dates,
+                [task_representation],
+                embed_dims,
+            )
+        )
     n_cpus = int(os.environ.get("NUM_PROCESSES", 4))
     with multiprocessing.Pool(processes=n_cpus) as pool:
         pool.starmap(run_single_test_job, jobs)
