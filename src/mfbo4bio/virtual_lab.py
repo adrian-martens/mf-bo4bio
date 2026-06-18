@@ -192,14 +192,14 @@ class EXPERIMENT:
 
         if scale == "MTP":
             scale_factor = 1.1
-            growth_inhibition = 0.7
+            growth_inhibition = 0.5
 
         elif scale == "MBR":
             scale_factor = 1
             growth_inhibition = 1
 
         elif scale == "PILOT":
-            scale_factor = 1.4
+            scale_factor = 1.3
             growth_inhibition = 0.9
 
         mu = self.mu(G, Q, L, A, growth_inhibition)
@@ -213,7 +213,7 @@ class EXPERIMENT:
         dX_V_dt = (mu - k_d) * X_V
         dX_D_dt = k_d * X_V - self.K_lysis * X_D
 
-        dP_dt = Y_P_X * X_T + Y_dot_P_X * X_V
+        dP_dt = Y_P_X * X_V + Y_dot_P_X * self.mu_max * G / (self.K_G + G) * X_V
 
         dG_dt = X_V * (-mu / Y_X_G - m_G)
         dQ_dt = X_V * (-mu / Y_X_Q - m_Q) - self.k_d_Q * Q
