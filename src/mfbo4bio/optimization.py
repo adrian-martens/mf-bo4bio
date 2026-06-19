@@ -1,9 +1,8 @@
 import numpy as np
 import torch
-from botorch.optim import optimize_acqf
-from utils import sampling
 
 from mfbo4bio import conditions_data as data
+from mfbo4bio.utils import sampling
 
 dtype = torch.float64
 feeding_max = data.feeding_max
@@ -48,6 +47,9 @@ def custom_optimization(
     process_parameters : dict, optional
         A dictionary containing process parameters for different cell types.
         Defaults to `data.process_parameters_alpha`.
+    mode : str, optional
+        Included for API compatibility with BO core calls. Currently only
+        "sampling" behavior is implemented.
 
     Returns
     -------
@@ -75,111 +77,61 @@ def custom_optimization(
     xx, yy = np.meshgrid(x, y)
     grid = np.c_[xx.ravel(), yy.ravel()]
 
-    if mode == "sequential":
-        for i in range(num_restarts):
-            candidate_list = []
-            acq_value_list = []
+    dimensions_dict = {
+        "fidelity": ("discrete", [0, 7, 10]),
+        "clone": ("discrete", list(range(len(process_parameters.keys())))),
+    }
 
-            shared_0 = grid[i][0]
-            shared_1 = grid[i][1]
+    fidelity_distribution = {0: 1, 7: 0, 10: 0}
 
-            fixed_features = {
-                0: shared_0.item(),
-                1: shared_1.item(),
-                2: ((0 - X_mean[2]) / X_std[2]).item(),
-                3: ((feeding_max - X_mean[3]) / X_std[3]).item(),
-                4: ((0 - X_mean[4]) / X_std[4]).item(),
-                5: ((0 - X_mean[5]) / X_std[5]).item(),
-            }
+    for i in range(num_restarts):
+        acq_value_list = []
 
-            for j in range(q):
-                if j > 0:
-                    first_candidate = candidate_list[0].detach()
-                    fixed_features[0] = first_candidate[0, 0].item()
-                    fixed_features[1] = first_candidate[0, 1].item()
+        shared_0 = grid[i][0]
+        shared_1 = grid[i][1]
 
-                candidate_j, acq_val_j = optimize_acqf(
-                    acq_function=acq_function,
-                    bounds=bounds,
-                    q=1,
-                    num_restarts=5,
-                    raw_samples=256,
-                    fixed_features=fixed_features,
-                )
+        row = torch.tensor(
+            [
+                shared_0,
+                shared_1,
+                (0 - X_mean[2]) / X_std[2],
+                (feeding_max - X_mean[3]) / X_std[3],
+                (0 - X_mean[4]) / X_std[4],
+                (0 - X_mean[5]) / X_std[5],
+            ],
+            dtype=torch.float64,
+        )
 
-                candidate_list.append(candidate_j)
+        candidate_i = row.repeat(q, 1)
 
-                if acq_val_j >= 0:
-                    acq_value_list.append(acq_val_j)
+        candidate_clones = torch.tensor(
+            sampling(
+                dimensions_dict=dimensions_dict,
+                num_samples=q,
+                seed=seed,
+                fidelity_distribution=fidelity_distribution,
+            ),
+            dtype=torch.float64,
+        )[:, 1].unsqueeze(-1)
 
-                X_pending = torch.cat(candidate_list, dim=0)
-                acq_function.set_X_pending(X_pending)
+        candidate_i = torch.cat((candidate_i, candidate_clones), 1)
 
-            total_acq = torch.stack(acq_value_list).sum()
+        for j in range(candidate_i.shape[0]):
+            X_j = candidate_i[j].unsqueeze(0)
+            X_pending = candidate_i[:j] if j > 0 else None
 
-            if best_acq_value is None or total_acq > best_acq_value:
-                best_acq_value = total_acq
-                best_candidates = torch.cat(candidate_list, dim=0)
+            acq_function.set_X_pending(X_pending)
+            acq_val_j = acq_function(X_j)
+            acq_value_list.append(acq_val_j.item())
 
-            acq_function.set_X_pending(None)
+        total_acq = torch.tensor(sum(acq_value_list))
+        acq_value_tensor = torch.tensor(acq_value_list)
 
-        return best_candidates, best_acq_value
+        if best_acq_value is None or total_acq > best_acq_value:
+            best_acq_value = total_acq
+            best_acq_value_tensor = acq_value_tensor
+            best_candidates = candidate_i
 
-    if mode == "sampling":
-        dimensions_dict = {
-            "fidelity": ("discrete", [0, 7, 10]),
-            "clone": ("discrete", list(range(len(process_parameters.keys())))),
-        }
+        acq_function.set_X_pending(None)
 
-        fidelity_distribution = {0: 1, 7: 0, 10: 0}
-
-        for i in range(num_restarts):
-            candidate_list = []
-            acq_value_list = []
-
-            shared_0 = grid[i][0]
-            shared_1 = grid[i][1]
-
-            row = torch.tensor(
-                [
-                    shared_0,
-                    shared_1,
-                    (0 - X_mean[2]) / X_std[2],
-                    (feeding_max - X_mean[3]) / X_std[3],
-                    (0 - X_mean[4]) / X_std[4],
-                    (0 - X_mean[5]) / X_std[5],
-                ],
-                dtype=torch.float64,
-            )
-
-            candidate_i = row.repeat(12, 1)
-
-            candidate_clones = torch.tensor(
-                sampling(
-                    dimensions_dict=dimensions_dict,
-                    num_samples=12,
-                    seed=seed,
-                    fidelity_distribution=fidelity_distribution,
-                ),
-                dtype=torch.float64,
-            )[:, 1].unsqueeze(-1)
-
-            candidate_i = torch.cat((candidate_i, candidate_clones), 1)
-
-            for j in range(candidate_i.shape[0]):
-                X_j = candidate_i[j].unsqueeze(0)
-                X_pending = candidate_i[: j + 1] if j > 0 else None
-
-                acq_function.set_X_pending(X_pending)
-                acq_val_j = acq_function(X_j)
-                acq_value_list.append(max(0, acq_val_j.item()))
-
-            total_acq = torch.tensor(sum(acq_value_list))
-
-            if best_acq_value is None or total_acq > best_acq_value:
-                best_acq_value = total_acq
-                best_candidates = candidate_i
-
-            acq_function.set_X_pending(None)
-
-        return best_candidates, best_acq_value
+    return best_candidates, best_acq_value_tensor

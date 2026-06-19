@@ -19,3 +19,7 @@ __pycache__/
 
 # pyenv
 .python-version
+
+# specific result folders
+results_2026*/
+results_old/
