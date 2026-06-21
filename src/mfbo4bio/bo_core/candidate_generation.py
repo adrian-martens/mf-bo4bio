@@ -88,6 +88,7 @@ def propose_batch_for_fidelity(
             options={"maxiter": 300, "batch_limit": 5},
             retry_on_optimization_warning=True,
         )
+        candidate = _clip_feeding_sum(candidate)
         if method == "GIBBON":
             # Keep clone/task ids valid integers after continuous optimization.
             max_clone = len(process_parameters.keys()) - 1
@@ -139,6 +140,21 @@ def _evaluate_batch_acq(acq_fn, batch):
     return torch.tensor(values, dtype=batch.dtype)
 
 
+def _clip_feeding_sum(candidate: torch.Tensor) -> torch.Tensor:
+    """Clip feeding dims (2,3,4) so their sum per row <= 1 in scaled space.
+
+    With fixed bounds lower=[0,0,0] and upper=[50,50,50] for feeding,
+    min-max scaling maps each dim to [0,1], so this enforces F1+F2+F3 <= 50
+    in raw space. Underfeeding (sum < 50) is allowed.
+    """
+    feed = candidate[:, 2:5]
+    feed_sum = feed.sum(dim=-1, keepdim=True)
+    over = feed_sum > 1.0
+    candidate = candidate.clone()
+    candidate[:, 2:5] = torch.where(over, feed / feed_sum, feed)
+    return candidate
+
+
 def _sampling_fallback_candidates(acq_fn, bounds, q, fixed_features, rng):
     dtype = torch.float64
     lower = bounds[0]
@@ -156,6 +172,7 @@ def _sampling_fallback_candidates(acq_fn, bounds, q, fixed_features, rng):
         for dim, value in fixed_features.items():
             batch[:, dim] = value
 
+        batch = _clip_feeding_sum(batch)
         batch[:, -1] = torch.round(batch[:, -1])
 
         score = 0.0
