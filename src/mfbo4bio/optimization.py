@@ -95,7 +95,7 @@ def custom_optimization(
                 shared_0,
                 shared_1,
                 (0 - X_mean[2]) / X_std[2],
-                (feeding_max - X_mean[3]) / X_std[3],
+                (0 - X_mean[3]) / X_std[3],
                 (0 - X_mean[4]) / X_std[4],
                 (0 - X_mean[5]) / X_std[5],
             ],
@@ -103,6 +103,11 @@ def custom_optimization(
         )
 
         candidate_i = row.repeat(q, 1)
+
+        f2_raw = np.random.default_rng(seed + i).uniform(0, feeding_max, q)
+        candidate_i[:, 3] = torch.tensor(
+            (f2_raw - X_mean[3]) / X_std[3], dtype=torch.float64
+        )
 
         candidate_clones = torch.tensor(
             sampling(

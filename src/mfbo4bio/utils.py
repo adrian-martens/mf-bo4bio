@@ -475,8 +475,6 @@ def sampling(
                         row[dimension_names.index("feeding1")] = 0
                     if "feeding3" in dimension_names:
                         row[dimension_names.index("feeding3")] = 0
-                    if "feeding2" in dimension_names:
-                        row[dimension_names.index("feeding2")] = feeding_max
             else:
                 feeding_indices = [
                     dimension_names.index(dim)
@@ -487,8 +485,9 @@ def sampling(
                     feeding_values = np.sum(
                         scaled_samples[:, feeding_indices], axis=1, keepdims=True
                     )
-                    feeding_values[feeding_values == 0] = 1
-                    scaled_samples[:, feeding_indices] *= feeding_max / feeding_values
+                    over = feeding_values > feeding_max
+                    scale = np.where(over, feeding_max / np.maximum(feeding_values, 1e-12), 1.0)
+                    scaled_samples[:, feeding_indices] *= scale
 
         final_samples.append(scaled_samples)
 

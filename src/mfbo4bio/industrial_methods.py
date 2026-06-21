@@ -468,15 +468,13 @@ def apply_feeding_constraints(samples, dimension_names, fidelity_value, constrai
     if fidelity_value == 0:
         for row in samples:
             for d in feeding_dims:
-                idx = dimension_names.index(d)
-                if d == "feeding2":
-                    row[idx] = feeding_max
-                else:
-                    row[idx] = 0
+                if d != "feeding2":
+                    row[dimension_names.index(d)] = 0
     else:
         feed_vals = np.sum(samples[:, feeding_indices], axis=1, keepdims=True)
-        feed_vals[feed_vals == 0] = 1  # prevent div by zero
-        samples[:, feeding_indices] *= feeding_max / feed_vals
+        over = feed_vals > feeding_max
+        scale = np.where(over, feeding_max / np.maximum(feed_vals, 1e-12), 1.0)
+        samples[:, feeding_indices] *= scale
 
     return samples
 
