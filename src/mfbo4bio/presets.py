@@ -35,8 +35,15 @@ class IndustrialPreset:
     repeats: int
 
 
-DEFAULT_INDUSTRIAL_PRESET = IndustrialPreset(
+DEFAULT_INDUSTRIAL_PRESET_ALPHA = IndustrialPreset(
     clone_dist="alpha",
+    platform_cond=True,
+    date="TEST",
+    repeats=15,
+)
+
+DEFAULT_INDUSTRIAL_PRESET_BETA = IndustrialPreset(
+    clone_dist="beta",
     platform_cond=True,
     date="TEST",
     repeats=15,

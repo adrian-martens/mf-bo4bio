@@ -117,7 +117,7 @@ def run_industrial(
         }
     )
 
-    num_batches_mid = 15
+    num_batches_mid = 10
     total_samples_mid = num_batches_mid * 4
     samples_mid_all = sampling(
         method=sampling_method,

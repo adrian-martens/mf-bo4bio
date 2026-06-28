@@ -1,10 +1,13 @@
-import argparse
 import multiprocessing
 import os
 from itertools import product
 from subprocess import run
 
 from mfbo4bio.presets import DEFAULT_BO_PRESET
+
+# ── Settings ──────────────────────────────────────────────────────────────────
+MTP_FEED_MODE = "none"   # "none" | "fixed_max" | "variable"
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def run_single_test_job(
@@ -59,15 +62,6 @@ def run_single_test_job(
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--mtp_feed_mode",
-        type=str,
-        default="none",
-        choices=["none", "fixed_max", "variable"],
-    )
-    args = parser.parse_args()
-
     preset = DEFAULT_BO_PRESET
     jobs = []
     for task_representation in preset.task_representations:
@@ -84,7 +78,7 @@ def main():
                 preset.dates,
                 [task_representation],
                 embed_dims,
-                [args.mtp_feed_mode],
+                [MTP_FEED_MODE],
             )
         )
     n_cpus = int(os.environ.get("NUM_PROCESSES", 4))
