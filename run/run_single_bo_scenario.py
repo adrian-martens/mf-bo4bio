@@ -45,6 +45,12 @@ def main():
     parser.add_argument("--date", type=str, required=True)
     parser.add_argument("--task_representation", type=str, required=True)
     parser.add_argument("--embed_dim", type=int, default=3)
+    parser.add_argument(
+        "--mtp_feed_mode",
+        type=str,
+        default="none",
+        choices=["none", "fixed_max", "variable"],
+    )
 
     args = parser.parse_args()
 
@@ -64,6 +70,7 @@ def main():
             mbr_level=args.mbr_level,
             task_representation=args.task_representation,
             embed_dim=args.embed_dim,
+            mtp_feed_mode=args.mtp_feed_mode,
         )
     elif args.test_type == "qUCB":
         qUCB.run(
@@ -74,6 +81,7 @@ def main():
             mbr_level=args.mbr_level,
             task_representation=args.task_representation,
             embed_dim=args.embed_dim,
+            mtp_feed_mode=args.mtp_feed_mode,
         )
     elif args.test_type == "qLogEI":
         qLogEI.run(
@@ -84,6 +92,7 @@ def main():
             mbr_level=args.mbr_level,
             task_representation=args.task_representation,
             embed_dim=args.embed_dim,
+            mtp_feed_mode=args.mtp_feed_mode,
         )
 
 

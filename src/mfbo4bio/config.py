@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Literal
 
 MethodName = Literal["qUCB", "qLogEI", "GIBBON", "industrial"]
+MTPFeedMode = Literal["none", "fixed_max", "variable"]
 
 
 @dataclass(slots=True)
@@ -13,6 +14,7 @@ class ExperimentConfig:
     feeding_max: float = 50.0
     temperature_bounds: tuple[float, float] = (30.0, 40.0)
     ph_bounds: tuple[float, float] = (6.0, 8.0)
+    mtp_feed_mode: MTPFeedMode = "none"
 
     def __post_init__(self) -> None:
         if self.mbr_level not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
@@ -23,6 +25,8 @@ class ExperimentConfig:
             raise ValueError("temperature_bounds must have low < high")
         if self.ph_bounds[0] >= self.ph_bounds[1]:
             raise ValueError("ph_bounds must have low < high")
+        if self.mtp_feed_mode not in ("none", "fixed_max", "variable"):
+            raise ValueError("mtp_feed_mode must be 'none', 'fixed_max', or 'variable'")
 
 
 @dataclass(slots=True)

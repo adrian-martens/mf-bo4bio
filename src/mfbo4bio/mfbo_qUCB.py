@@ -13,6 +13,7 @@ def run(
     task_representation="HYBRID",
     embed_dim=3,
     beta=1,
+    mtp_feed_mode="none",
 ):
     config = RunConfig(
         method="qUCB",
@@ -21,6 +22,7 @@ def run(
         experiment=ExperimentConfig(
             clone_distribution=clone_distribution,
             mbr_level=int(mbr_level),
+            mtp_feed_mode=mtp_feed_mode,
         ),
         bo=BOConfig(
             n_iterations=n_iterations,

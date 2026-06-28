@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing
 import os
 from itertools import product
@@ -15,7 +16,7 @@ def run_single_test_job(
     date,
     task_representation,
     embed_dim,
-
+    mtp_feed_mode="none",
 ):
     embed_suffix = f"_embed{embed_dim}" if task_representation == "HYBRID" else ""
     output_file = os.path.join(
@@ -50,12 +51,23 @@ def run_single_test_job(
             task_representation,
             "--embed_dim",
             str(embed_dim),
+            "--mtp_feed_mode",
+            mtp_feed_mode,
         ],
         check=True,
     )
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mtp_feed_mode",
+        type=str,
+        default="none",
+        choices=["none", "fixed_max", "variable"],
+    )
+    args = parser.parse_args()
+
     preset = DEFAULT_BO_PRESET
     jobs = []
     for task_representation in preset.task_representations:
@@ -72,6 +84,7 @@ def main():
                 preset.dates,
                 [task_representation],
                 embed_dims,
+                [args.mtp_feed_mode],
             )
         )
     n_cpus = int(os.environ.get("NUM_PROCESSES", 4))

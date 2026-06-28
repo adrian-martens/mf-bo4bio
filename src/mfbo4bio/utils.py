@@ -470,11 +470,17 @@ def sampling(
             feeding_dims = constraints.get("feeding_dims", [])
             feeding_max = constraints.get("feeding_max", 0)
             if fidelity_value == 0:
-                for row in scaled_samples:
-                    if "feeding1" in dimension_names:
-                        row[dimension_names.index("feeding1")] = 0
-                    if "feeding3" in dimension_names:
-                        row[dimension_names.index("feeding3")] = 0
+                mtp_mode = constraints.get("mtp_feed_mode", "none")
+                for dim in feeding_dims:
+                    if dim not in dimension_names:
+                        continue
+                    idx = dimension_names.index(dim)
+                    if dim == "feeding2" and mtp_mode == "fixed_max":
+                        scaled_samples[:, idx] = feeding_max
+                    elif dim == "feeding2" and mtp_mode == "variable":
+                        pass  # leave as sampled
+                    else:
+                        scaled_samples[:, idx] = 0
             else:
                 feeding_indices = [
                     dimension_names.index(dim)

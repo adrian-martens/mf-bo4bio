@@ -90,6 +90,7 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
         constraints = {
             "feeding_max": exp_cfg.feeding_max,
             "feeding_dims": ["feeding1", "feeding2", "feeding3"],
+            "mtp_feed_mode": exp_cfg.mtp_feed_mode,
         }
 
         x_initial = sampling(
@@ -219,6 +220,7 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
                     x_std=x_std,
                     rng=rng,
                     process_parameters=process_parameters,
+                    mtp_feed_mode=exp_cfg.mtp_feed_mode,
                 )
                 scored_candidates[fidelity] = cand_std
 
@@ -311,8 +313,8 @@ def run_bo_engine(config: RunConfig) -> BORunResult:
     payload = {
         "clone distribution": exp_cfg.clone_distribution,
         "mbr_level": exp_cfg.mbr_level,
-        "n_iterations": batch_size,
-        "iterations": bo_cfg.n_iterations,
+        "n_iterations": len(best_values),
+        "max_iterations": bo_cfg.n_iterations,
         "best_values": best_values,
         "batches": batches,
         "best_points": best_from_batch,

@@ -52,6 +52,7 @@ def propose_batch_for_fidelity(
     x_std: np.ndarray,
     rng,
     process_parameters,
+    mtp_feed_mode: str = "none",
 ):
     dtype = torch.float64
     fidelity_fixed = torch.tensor((fidelity - x_mean[5]) / x_std[5], dtype=dtype)
@@ -68,6 +69,7 @@ def propose_batch_for_fidelity(
             mode="sampling",
             seed=int(rng.integers(0, 2**32 - 1)),
             process_parameters=process_parameters,
+            mtp_feed_mode=mtp_feed_mode,
         )
         return candidate, acq_value
 

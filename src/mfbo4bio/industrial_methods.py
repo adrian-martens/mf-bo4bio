@@ -452,11 +452,9 @@ def apply_feeding_constraints(samples, dimension_names, fidelity_value, constrai
 
     Notes
     -----
-    - For `fidelity_value == 0`, the first feeding dimension is set to 0 and the
-        second is set to `feeding_max`. This assumes a fixed feeding schedule for
-        low-fidelity runs.
-    - For `fidelity_value != 0`, the feeding values are scaled proportionally so
-        that their sum equals `feeding_max`.
+    - For `fidelity_value == 0`, all feeding dimensions are set to 0 (no feeding at MTP).
+    - For `fidelity_value != 0`, feeding values exceeding `feeding_max` in total are
+        clipped proportionally; underfeeding is allowed.
     """
 
     feeding_dims = constraints.get("feeding_dims", [])
@@ -466,10 +464,15 @@ def apply_feeding_constraints(samples, dimension_names, fidelity_value, constrai
     ]
 
     if fidelity_value == 0:
-        for row in samples:
-            for d in feeding_dims:
-                if d != "feeding2":
-                    row[dimension_names.index(d)] = 0
+        mtp_mode = constraints.get("mtp_feed_mode", "none")
+        for d in feeding_dims:
+            idx = dimension_names.index(d)
+            if d == "feeding2" and mtp_mode == "fixed_max":
+                samples[:, idx] = feeding_max
+            elif d == "feeding2" and mtp_mode == "variable":
+                pass  # leave as sampled
+            else:
+                samples[:, idx] = 0
     else:
         feed_vals = np.sum(samples[:, feeding_indices], axis=1, keepdims=True)
         over = feed_vals > feeding_max
@@ -487,6 +490,7 @@ def run(
     clone_distribution="alpha",
     mbr_level=7,
     platform_cond=True,
+    mtp_feed_mode="none",
 ):
     from mfbo4bio.config import BOConfig, ExperimentConfig, RunConfig
     from mfbo4bio.pipeline import run_industrial
@@ -498,6 +502,7 @@ def run(
         experiment=ExperimentConfig(
             clone_distribution=clone_distribution,
             mbr_level=int(mbr_level),
+            mtp_feed_mode=mtp_feed_mode,
         ),
         bo=BOConfig(n_iterations=n_iterations),
     )
