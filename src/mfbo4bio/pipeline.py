@@ -60,6 +60,7 @@ def run_industrial(
     constraints = {
         "feeding_max": feeding_max,
         "feeding_dims": ["feeding1", "feeding2", "feeding3"],
+        "mtp_feed_mode": config.experiment.mtp_feed_mode,
     }
 
     # Range of pH and Temp is chosen very narrowly on purpose
@@ -116,7 +117,7 @@ def run_industrial(
         }
     )
 
-    num_batches_mid = 15
+    num_batches_mid = 10
     total_samples_mid = num_batches_mid * 4
     samples_mid_all = sampling(
         method=sampling_method,
@@ -193,8 +194,8 @@ def run_industrial(
     payload = {
         "clone distribution": config.experiment.clone_distribution,
         "mbr_level": mbr_level,
-        "n_iterations": 15,
-        "iterations": config.bo.n_iterations,
+        "n_iterations": len(best_values),
+        "max_iterations": num_batches_low + num_batches_mid + num_batches_high,
         "best_values": best_values,
         "best_points": [point.tolist() for point in best_from_batch],
         "batches": [batch.tolist() for batch in batches],

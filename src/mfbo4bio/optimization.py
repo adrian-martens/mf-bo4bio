@@ -18,6 +18,7 @@ def custom_optimization(
     mode="sampling",
     seed=42,
     process_parameters=data.process_parameters_alpha,
+    mtp_feed_mode="none",
 ):
     """
     Performs a custom optimization routine for an acquisition function.
@@ -90,12 +91,17 @@ def custom_optimization(
         shared_0 = grid[i][0]
         shared_1 = grid[i][1]
 
+        if mtp_feed_mode == "fixed_max":
+            f2_val = feeding_max
+        else:
+            f2_val = 0.0
+
         row = torch.tensor(
             [
                 shared_0,
                 shared_1,
                 (0 - X_mean[2]) / X_std[2],
-                (feeding_max - X_mean[3]) / X_std[3],
+                (f2_val - X_mean[3]) / X_std[3],
                 (0 - X_mean[4]) / X_std[4],
                 (0 - X_mean[5]) / X_std[5],
             ],
@@ -103,6 +109,12 @@ def custom_optimization(
         )
 
         candidate_i = row.repeat(q, 1)
+
+        if mtp_feed_mode == "variable":
+            f2_raw = np.random.default_rng(seed + i).uniform(0, feeding_max, q)
+            candidate_i[:, 3] = torch.tensor(
+                (f2_raw - X_mean[3]) / X_std[3], dtype=torch.float64
+            )
 
         candidate_clones = torch.tensor(
             sampling(

@@ -5,6 +5,10 @@ from subprocess import run
 
 from mfbo4bio.presets import DEFAULT_BO_PRESET
 
+# ── Settings ──────────────────────────────────────────────────────────────────
+MTP_FEED_MODE = "none"   # "none" | "fixed_max" | "variable"
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def run_single_test_job(
     test_type,
@@ -15,7 +19,7 @@ def run_single_test_job(
     date,
     task_representation,
     embed_dim,
-
+    mtp_feed_mode="none",
 ):
     embed_suffix = f"_embed{embed_dim}" if task_representation == "HYBRID" else ""
     output_file = os.path.join(
@@ -50,6 +54,8 @@ def run_single_test_job(
             task_representation,
             "--embed_dim",
             str(embed_dim),
+            "--mtp_feed_mode",
+            mtp_feed_mode,
         ],
         check=True,
     )
@@ -72,6 +78,7 @@ def main():
                 preset.dates,
                 [task_representation],
                 embed_dims,
+                [MTP_FEED_MODE],
             )
         )
     n_cpus = int(os.environ.get("NUM_PROCESSES", 4))
